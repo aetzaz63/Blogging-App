@@ -3,79 +3,83 @@ import React, { useState, useContext } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as Yup from 'yup';
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Shield } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { UserContext } from '@/app/context/UserContext';
 
-// ✅ Validation schema
-const loginSchema = Yup.object().shape({
+const adminLoginSchema = Yup.object().shape({
   email: Yup.string().email('Invalid email address').required('Email is required'),
   password: Yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
 });
 
-const LoginPage = () => {
+const AdminLoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
-  const { login } = useContext(UserContext); // ✅ get login() function from context
+  const { login } = useContext(UserContext);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm({
-    resolver: yupResolver(loginSchema),
+    resolver: yupResolver(adminLoginSchema),
   });
 
   const onSubmit = (data) => {
-    const users = JSON.parse(localStorage.getItem('users')) || [];
-    const matchedUser = users.find(
-      (u) => u.email === data.email && u.password === data.password
+    // Check admin credentials
+    const admins = JSON.parse(localStorage.getItem('admins')) || [
+      { email: 'admin@blogsphere.com', password: 'admin123', fullName: 'Admin User', role: 'admin' }
+    ];
+    
+    // Save default admin if not exists
+    if (!localStorage.getItem('admins')) {
+      localStorage.setItem('admins', JSON.stringify(admins));
+    }
+
+    const matchedAdmin = admins.find(
+      (admin) => admin.email === data.email && admin.password === data.password
     );
 
-    if (matchedUser) {
-      if (matchedUser.disabled) {
-        setMessage('');
-        setError('Your account has been disabled. Please contact the administrator.');
-        return;
-      }
-
+    if (matchedAdmin) {
       setError('');
-      setMessage('Login successful! Redirecting to home...');
+      setMessage('Login successful! Redirecting to admin dashboard...');
       
-      
-      login(matchedUser);
+      // Mark user as admin in context
+      login({ ...matchedAdmin, isAdmin: true });
 
-      // ✅ 2. Redirect after delay
       setTimeout(() => {
-        router.push('/');
-      }, 1500);
+        router.push('/admin/dashboard');
+      }, 100);
     } else {
       setMessage('');
-      setError('Invalid email or password.');
+      setError('Invalid admin credentials.');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4 py-12 relative">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center px-4 py-12">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-          <p className="text-gray-600">Log in to continue to BlogSphere</p>
+          <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Shield className="text-white" size={32} />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Login</h1>
+          <p className="text-gray-600">Access BlogSphere Administration</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Email Field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Admin Email</label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type="email"
-                placeholder="your@email.com"
+                placeholder="admin@blogsphere.com"
                 {...register('email')}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
               />
             </div>
             {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
@@ -88,9 +92,9 @@ const LoginPage = () => {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Enter your password"
+                placeholder="Enter admin password"
                 {...register('password')}
-                className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
               />
               <button
                 type="button"
@@ -105,12 +109,11 @@ const LoginPage = () => {
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            className="w-full bg-purple-600 text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
           >
-            Log In
+            Login as Admin
           </button>
 
-          {/* ✅ Messages */}
           {message && (
             <div className="mt-4 text-center text-green-600 font-medium">
               {message}
@@ -123,13 +126,13 @@ const LoginPage = () => {
           )}
         </form>
 
-        <p className="mt-8 text-center text-sm text-gray-600">
-          Don’t have an account?{' '}
+        <p className="mt-6 text-center text-sm text-gray-600">
+          Not an admin?{' '}
           <button
-            onClick={() => router.push('/auth/register')}
-            className="text-blue-600 hover:text-blue-700 font-semibold"
+            onClick={() => router.push('/')}
+            className="text-purple-600 hover:text-purple-700 font-semibold"
           >
-            Sign up
+            Go to Homepage
           </button>
         </p>
       </div>
@@ -137,4 +140,4 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+export default AdminLoginPage;
