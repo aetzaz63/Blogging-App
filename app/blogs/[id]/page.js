@@ -12,7 +12,6 @@ const BlogDetailPage = ({ params }) => {
   const router = useRouter();
   const { user } = useContext(UserContext);
 
-  // ✅ Unwrap params using React.use()
   const unwrappedParams = React.use(params);
   const postId = parseInt(unwrappedParams.id);
 
@@ -20,7 +19,6 @@ const BlogDetailPage = ({ params }) => {
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
 
-  // Load post from localStorage or mock data
   useEffect(() => {
     const loadPost = () => {
       const savedPosts = localStorage.getItem("blogPosts");
@@ -31,7 +29,6 @@ const BlogDetailPage = ({ params }) => {
       if (foundPost) {
         setPost(foundPost);
 
-        // Check if user is following this author
         if (user) {
           const following = localStorage.getItem(`following_${user.email}`);
           if (following) {
@@ -47,7 +44,6 @@ const BlogDetailPage = ({ params }) => {
     loadPost();
   }, [postId, user]);
 
-  // Handle follow/unfollow
   const handleFollowToggle = () => {
     if (!user) {
       alert("Please log in to follow authors");
@@ -67,12 +63,28 @@ const BlogDetailPage = ({ params }) => {
         followingList.push(post.authorEmail);
       }
       setIsFollowing(true);
+
+      // Create notification for the author
+      const notifKey = `notifications_${post.authorEmail}`;
+      const existingNotifs = localStorage.getItem(notifKey);
+      const notifs = existingNotifs ? JSON.parse(existingNotifs) : [];
+      
+      notifs.push({
+        id: Date.now(),
+        type: 'follow',
+        from: user.fullName,
+        fromEmail: user.email,
+        message: `${user.fullName} started following you`,
+        date: new Date().toISOString(),
+        read: false,
+      });
+      
+      localStorage.setItem(notifKey, JSON.stringify(notifs));
     }
 
     localStorage.setItem(followKey, JSON.stringify(followingList));
   };
 
-  // Update post in state when ratings/comments change
   const handlePostUpdate = () => {
     const savedPosts = localStorage.getItem("blogPosts");
     if (savedPosts) {
