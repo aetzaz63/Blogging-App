@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useContext, useState, useEffect } from "react";
-import { Calendar, User, Edit2, Trash2, MessageSquare } from "lucide-react";
+import { Calendar, User, Edit2, Trash2, MessageSquare, EyeOff } from "lucide-react";
 import RatingStars from "./RatingStars";
 import CommentSection from "./CommentSection";
 import { UserContext } from "@/app/context/UserContext";
@@ -13,6 +13,7 @@ const BlogCard = ({ post, onEdit, onDelete }) => {
   const [commentCount, setCommentCount] = useState(post.comments?.length || 0);
 
   const isOwner = user && post.authorEmail === user.email;
+  const isAdmin = user && user.isAdmin;
 
   const handleCommentChange = (newCount) => setCommentCount(newCount);
 
@@ -26,8 +27,19 @@ const BlogCard = ({ post, onEdit, onDelete }) => {
     }
   };
 
+  // Don't render disabled posts unless user is owner or admin
+  if (post.disabled && !isOwner && !isAdmin) {
+    return null;
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition">
+      {post.disabled && (
+        <div className="bg-red-100 border-b border-red-200 px-4 py-2 flex items-center gap-2 text-red-700 text-sm font-medium">
+          <EyeOff size={16} />
+          <span>This blog is currently disabled</span>
+        </div>
+      )}
       <img
         src={post.image}
         alt={post.title}

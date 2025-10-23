@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useRouter } from 'next/navigation';
 import { UserContext } from '@/app/context/UserContext';
-import { Shield, Users, Lock, Unlock, Search, Filter, RefreshCw, Mail, Calendar, AlertCircle } from 'lucide-react';
+import { Shield, Users, Lock, Unlock, Search, Filter, RefreshCw, Mail, AlertCircle, MessageSquare } from 'lucide-react';
 
 const AdminDashboard = () => {
   const { user } = useContext(UserContext);
@@ -10,17 +10,18 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'active', 'disabled'
+  const [filterStatus, setFilterStatus] = useState('all');
   const [stats, setStats] = useState({ total: 0, active: 0, disabled: 0 });
+  const [blogStats, setBlogStats] = useState({ total: 0, enabled: 0, disabled: 0 });
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    // Check if user is admin
     if (!user || !user.isAdmin) {
       router.push('/admin/login');
       return;
     }
     loadUsers();
+    loadBlogStats();
   }, [user, router]);
 
   const loadUsers = () => {
@@ -28,6 +29,14 @@ const AdminDashboard = () => {
     setUsers(allUsers);
     applyFilters(allUsers, searchTerm, filterStatus);
     calculateStats(allUsers);
+  };
+
+  const loadBlogStats = () => {
+    const allBlogs = JSON.parse(localStorage.getItem('blogPosts')) || [];
+    const total = allBlogs.length;
+    const disabled = allBlogs.filter(b => b.disabled).length;
+    const enabled = total - disabled;
+    setBlogStats({ total, enabled, disabled });
   };
 
   const calculateStats = (userList) => {
@@ -40,7 +49,6 @@ const AdminDashboard = () => {
   const applyFilters = (userList, search, status) => {
     let filtered = [...userList];
 
-    // Search filter
     if (search) {
       filtered = filtered.filter(u =>
         u.fullName.toLowerCase().includes(search.toLowerCase()) ||
@@ -48,7 +56,6 @@ const AdminDashboard = () => {
       );
     }
 
-    // Status filter
     if (status === 'active') {
       filtered = filtered.filter(u => !u.disabled);
     } else if (status === 'disabled') {
@@ -97,7 +104,7 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-md p-6 mt-15 mb-6">
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center">
@@ -109,6 +116,12 @@ const AdminDashboard = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => router.push('/admin/blogs')}
+                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition cursor-pointer"
+              >
+                Manage Blogs
+              </button>
               <button
                 onClick={() => router.push('/')}
                 className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition cursor-pointer"
@@ -126,39 +139,47 @@ const AdminDashboard = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* User Stats */}
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-md p-6 text-white">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <Users size={24} />
+              User Statistics
+            </h2>
+            <div className="grid grid-cols-3 gap-4">
               <div>
-                <p className="text-gray-600 text-sm font-medium">Total Users</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stats.total}</p>
+                <p className="text-blue-100 text-sm">Total Users</p>
+                <p className="text-3xl font-bold mt-1">{stats.total}</p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Users className="text-blue-600" size={24} />
+              <div>
+                <p className="text-blue-100 text-sm">Active</p>
+                <p className="text-3xl font-bold mt-1">{stats.active}</p>
+              </div>
+              <div>
+                <p className="text-blue-100 text-sm">Disabled</p>
+                <p className="text-3xl font-bold mt-1">{stats.disabled}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between">
+          {/* Blog Stats */}
+          <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg shadow-md p-6 text-white">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <MessageSquare size={24} />
+              Blog Statistics
+            </h2>
+            <div className="grid grid-cols-3 gap-4">
               <div>
-                <p className="text-gray-600 text-sm font-medium">Active Users</p>
-                <p className="text-3xl font-bold text-green-600 mt-2">{stats.active}</p>
+                <p className="text-purple-100 text-sm">Total Blogs</p>
+                <p className="text-3xl font-bold mt-1">{blogStats.total}</p>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <Unlock className="text-green-600" size={24} />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-600 text-sm font-medium">Disabled Users</p>
-                <p className="text-3xl font-bold text-red-600 mt-2">{stats.disabled}</p>
+                <p className="text-purple-100 text-sm">Enabled</p>
+                <p className="text-3xl font-bold mt-1">{blogStats.enabled}</p>
               </div>
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                <Lock className="text-red-600" size={24} />
+              <div>
+                <p className="text-purple-100 text-sm">Disabled</p>
+                <p className="text-3xl font-bold mt-1">{blogStats.disabled}</p>
               </div>
             </div>
           </div>
