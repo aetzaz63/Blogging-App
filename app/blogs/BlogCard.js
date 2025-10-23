@@ -6,9 +6,11 @@ import RatingStars from "./RatingStars";
 import CommentSection from "./CommentSection";
 import { UserContext } from "@/app/context/UserContext";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const BlogCard = ({ post, onEdit, onDelete }) => {
   const { user } = useContext(UserContext);
+  const router = useRouter();
   const [showComments, setShowComments] = useState(false);
   const [commentCount, setCommentCount] = useState(post.comments?.length || 0);
 
@@ -17,7 +19,6 @@ const BlogCard = ({ post, onEdit, onDelete }) => {
 
   const handleCommentChange = (newCount) => setCommentCount(newCount);
 
-  // Update localStorage when ratings or comments change
   const updatePostInStorage = (updatedPost) => {
     const savedPosts = localStorage.getItem("blogPosts");
     if (savedPosts) {
@@ -27,7 +28,15 @@ const BlogCard = ({ post, onEdit, onDelete }) => {
     }
   };
 
-  // Don't render disabled posts unless user is owner or admin
+  const handleAuthorClick = (e) => {
+    e.preventDefault();
+    if (user && post.authorEmail === user.email) {
+      router.push('/profile/my-blogs');
+    } else if (post.authorEmail) {
+      router.push(`/profile/user/${encodeURIComponent(post.authorEmail)}`);
+    }
+  };
+
   if (post.disabled && !isOwner && !isAdmin) {
     return null;
   }
@@ -79,7 +88,13 @@ const BlogCard = ({ post, onEdit, onDelete }) => {
 
         <div className="flex items-center gap-4 text-sm text-gray-500 mb-4 mt-3">
           <div className="flex items-center gap-1">
-            <User size={14} /> <span>{post.author}</span>
+            <User size={14} /> 
+            <span 
+              onClick={handleAuthorClick}
+              className="hover:text-blue-600 cursor-pointer hover:underline"
+            >
+              {post.author}
+            </span>
           </div>
           <div className="flex items-center gap-1">
             <Calendar size={14} />{" "}

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as Yup from 'yup';
-import { Camera, Mail, User, Lock, Trash2, Edit2, Save, X, Eye, EyeOff, Users, Bell, Rss } from 'lucide-react';
+import { Camera, Mail, User, Lock, Trash2, Edit2, Save, X, Eye, EyeOff, Users, Bell, Rss, BookOpen, UserCheck } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { UserContext } from '../context/UserContext';
@@ -23,16 +23,20 @@ const ProfilePage = () => {
   const [message, setMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [stats, setStats] = useState({ following: 0, notifications: 0 });
+  const [stats, setStats] = useState({ 
+    following: 0, 
+    followers: 0,
+    notifications: 0,
+    myPosts: 0 
+  });
 
   useEffect(() => {
-    if (!loading && !user) { // Wait for loading to complete
+    if (!loading && !user) {
       router.push('/auth/login');
     } else if (user) {
       loadStats();
     }
-  }, [user, loading, router]); // Add loading to dependencies
-
+  }, [user, loading, router]);
 
   const loadStats = () => {
     if (!user) return;
@@ -42,14 +46,40 @@ const ProfilePage = () => {
     const following = localStorage.getItem(followKey);
     const followingCount = following ? JSON.parse(following).length : 0;
     
+    // Load followers count
+    const allUsers = JSON.parse(localStorage.getItem('users')) || [];
+    let followersCount = 0;
+    allUsers.forEach(otherUser => {
+      if (otherUser.email !== user.email) {
+        const theirFollowKey = `following_${otherUser.email}`;
+        const theirFollowing = localStorage.getItem(theirFollowKey);
+        if (theirFollowing) {
+          const theirFollowingList = JSON.parse(theirFollowing);
+          if (theirFollowingList.includes(user.email)) {
+            followersCount++;
+          }
+        }
+      }
+    });
+    
     // Load unread notifications count
     const notifKey = `notifications_${user.email}`;
     const notifs = localStorage.getItem(notifKey);
     const unreadCount = notifs 
       ? JSON.parse(notifs).filter(n => !n.read).length 
       : 0;
+
+    // Load user's posts count
+    const savedPosts = localStorage.getItem('blogPosts');
+    const posts = savedPosts ? JSON.parse(savedPosts) : [];
+    const myPostsCount = posts.filter(post => post.authorEmail === user.email).length;
     
-    setStats({ following: followingCount, notifications: unreadCount });
+    setStats({ 
+      following: followingCount, 
+      followers: followersCount,
+      notifications: unreadCount,
+      myPosts: myPostsCount 
+    });
   };
 
   const {
@@ -101,6 +131,7 @@ const ProfilePage = () => {
     login(updatedUser);
     setMessage('✅ Profile updated successfully!');
     setIsEditing(false);
+    setTimeout(() => setMessage(''), 3000);
   };
 
   const confirmDelete = () => {
@@ -115,9 +146,9 @@ const ProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-16 px-6 relative">
-      <div className="max-w-5xl w-full bg-white rounded-2xl shadow-2xl p-10">
+      <div className="max-w-6xl w-full bg-white rounded-2xl shadow-2xl p-10">
         {/* Quick Access Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <button
             onClick={() => router.push('/profile/feed')}
             className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition cursor-pointer shadow-lg"
@@ -125,7 +156,29 @@ const ProfilePage = () => {
             <Rss size={24} />
             <div className="text-left">
               <div className="font-semibold">Your Feed</div>
-              <div className="text-xs opacity-90">Latest from followed</div>
+              <div className="text-xs opacity-90">Latest posts</div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => router.push('/profile/my-blogs')}
+            className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition cursor-pointer shadow-lg"
+          >
+            <BookOpen size={24} />
+            <div className="text-left">
+              <div className="font-semibold">My Blogs ({stats.myPosts})</div>
+              <div className="text-xs opacity-90">Manage posts</div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => router.push('/profile/followers')}
+            className="flex items-center gap-3 p-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 transition cursor-pointer shadow-lg"
+          >
+            <UserCheck size={24} />
+            <div className="text-left">
+              <div className="font-semibold">Followers ({stats.followers})</div>
+              <div className="text-xs opacity-90">Who follows you</div>
             </div>
           </button>
 
@@ -136,10 +189,12 @@ const ProfilePage = () => {
             <Users size={24} />
             <div className="text-left">
               <div className="font-semibold">Following ({stats.following})</div>
-              <div className="text-xs opacity-90">Manage connections</div>
+              <div className="text-xs opacity-90">Your connections</div>
             </div>
           </button>
+        </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <button
             onClick={() => router.push('/profile/notifications')}
             className="flex items-center gap-3 p-4 bg-gradient-to-r from-pink-500 to-pink-600 text-white rounded-xl hover:from-pink-600 hover:to-pink-700 transition cursor-pointer shadow-lg relative"
@@ -181,7 +236,7 @@ const ProfilePage = () => {
 
             <button
               onClick={() => setShowConfirm(true)}
-              className="mt-6 flex items-center gap-2 text-red-600 hover:text-red-700 font-medium"
+              className="mt-6 flex items-center gap-2 text-red-600 hover:text-red-700 font-medium cursor-pointer"
             >
               <Trash2 size={18} /> Delete Account
             </button>
@@ -260,7 +315,7 @@ const ProfilePage = () => {
                   <button
                     type="button"
                     onClick={() => setIsEditing(true)}
-                    className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition"
+                    className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition cursor-pointer"
                   >
                     <Edit2 size={18} /> Edit Profile
                   </button>
@@ -268,7 +323,7 @@ const ProfilePage = () => {
                   <div className="flex items-center gap-4">
                     <button
                       type="submit"
-                      className="flex items-center gap-2 bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 transition"
+                      className="flex items-center gap-2 bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 transition cursor-pointer"
                     >
                       <Save size={18} /> Save
                     </button>
@@ -281,9 +336,9 @@ const ProfilePage = () => {
                           email: user.email,
                           password: user.password || '',
                         });
-                        setPreview(user.profileImage || '/default-avatar.png');
+                        setPreview(user.profileImage || '/file.svg');
                       }}
-                      className="flex items-center gap-2 bg-gray-300 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-400 transition"
+                      className="flex items-center gap-2 bg-gray-300 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-400 transition cursor-pointer"
                     >
                       <X size={18} /> Cancel
                     </button>
@@ -307,13 +362,13 @@ const ProfilePage = () => {
             <div className="flex justify-center gap-4">
               <button
                 onClick={confirmDelete}
-                className="bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 transition"
+                className="bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 transition cursor-pointer"
               >
                 Yes, Delete
               </button>
               <button
                 onClick={() => setShowConfirm(false)}
-                className="bg-gray-300 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-400 transition"
+                className="bg-gray-300 text-gray-700 px-5 py-2 rounded-lg hover:bg-gray-400 transition cursor-pointer"
               >
                 Cancel
               </button>
